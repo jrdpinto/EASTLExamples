@@ -5,7 +5,14 @@ BUILD_FOLDER=build
 RELEASE_DIR=${BUILD_FOLDER}/release
 DEBUG_DIR=${BUILD_FOLDER}/debug
 
+# NOTE: Submodule update is not recursive as a recursive update is horrendously slow
+echo "Updating EASTL"
+git submodule update --init
+
 pushd ${EASTL_FOLDER}
+
+echo "Updating EASTL submodules"
+git submodule update --init
 
 echo "Clearing build folder ${EASTL_FOLDER}/${BUILD_FOLDER}"
 rm -rf ${BUILD_FOLDER}
