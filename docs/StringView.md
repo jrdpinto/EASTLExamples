@@ -134,7 +134,7 @@ int main()
 
     return 0;
 }
-``
+```
 
 [Compiling it](https://godbolt.org/z/TWhKhh6G1) with the same parameters as before gives us the following output.
 
