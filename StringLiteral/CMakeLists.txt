@@ -2,7 +2,7 @@
 
 cmake_minimum_required (VERSION 3.8)
 
-project("EASTLAnalysis")
+project("EASTLExamples")
 
 # Collect all subdirectories
 file(GLOB sources "*/CMakeLists.txt")

@@ -2,7 +2,7 @@
 cmake_minimum_required (VERSION 3.8)
 set (CMAKE_CXX_STANDARD 17)
 
-project("EASTLAnalysis" LANGUAGES CXX)
+project("EASTLExamples" LANGUAGES CXX)
 
 message("Current directory: ${CMAKE_CURRENT_SOURCE_DIR}")
 set(EASTL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/EASTL)
