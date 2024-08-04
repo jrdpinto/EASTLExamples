@@ -7,7 +7,7 @@ constexpr eastl::string_view LOCALE_EN_HELLO = "Hello %.*s! How are you?\n";
 constexpr const char* NAME_ELEANOR = "Eleanor Rigby";
 constexpr eastl::string_view NAME_TOM = "Tom";
 
-void SayHello(const eastl::string_view localised, const eastl::string_view fullName)
+void SayHello(eastl::string_view localised, eastl::string_view fullName)
 {
     size_t length = fullName.length();
     if (length <= 0)
