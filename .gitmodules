@@ -1,3 +1,4 @@
 [submodule "external/EASTL"]
-	path = external/EASTL
-	url = https://github.com/electronicarts/EASTL.git
+    path = external/EASTL
+    url = https://github.com/electronicarts/EASTL.git
+    ignore = dirty
