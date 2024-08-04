@@ -74,3 +74,5 @@ bld/
 # Visual Studio Code
 build/
 .vscode/
+
+external/EASTL
