@@ -9,16 +9,16 @@ constexpr eastl::string_view NAME_TOM = "Tom";
 
 void SayHello(eastl::string_view localised, eastl::string_view fullName)
 {
-    size_t length = fullName.length();
-    if (length <= 0)
+    if (localised.empty() || fullName.empty())
     {
         return;
     }
 
     size_t delimiterPosition = fullName.find(' ');
-    int firstNameLength = delimiterPosition != eastl::string_view::npos ? delimiterPosition : length;
+    eastl::string_view outputName = delimiterPosition != eastl::string_view::npos ?
+        fullName.substr(0, delimiterPosition) : fullName;
 
-    printf(localised.data(), firstNameLength, fullName);
+    printf(localised.data(), outputName.length(), outputName);
 }
 
 int main()
