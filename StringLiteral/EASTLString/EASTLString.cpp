@@ -6,13 +6,13 @@ void* operator new[](size_t size, const char* name, int flags, unsigned debugFla
 	return new uint8_t[size];
 }
 
-const eastl::string LOCALE_FR_HELLO = "Bonjour %.*s! Comment allez-vous?\n";
-const eastl::string LOCALE_EN_HELLO = "Hello %.*s! How are you?\n";
+const eastl::string MOE_DIALOGUE_1 = "Hey, is there a %.*s here? Hey, everybody, I wanna %.*s!\n";
+const eastl::string MOE_DIALOGUE_2 = "Uh, %.*s? Hey, I'm lookin for %.*s!\n";
 
-const char* NAME_ELEANOR = "Eleanor Rigby";
-const eastl::string  NAME_TOM = "Tom";
+const char* PRANK_NAME_1 = "Seymour Butz";
+const eastl::string  PRANK_NAME_2 = "Amanda Hugginkiss";
 
-void SayHello(const eastl::string& localised, const eastl::string& fullName)
+void PrankMoe(const eastl::string& localised, const eastl::string& fullName)
 {
     if (localised.empty() || fullName.empty())
     {
@@ -23,13 +23,13 @@ void SayHello(const eastl::string& localised, const eastl::string& fullName)
     eastl::string outputName = delimiterPosition != eastl::string::npos ?
         fullName.substr(0, delimiterPosition) : fullName;
 
-    printf(localised.data(), outputName.length(), outputName);
+    printf(localised.data(), outputName.length(), outputName.data(), fullName.length(), fullName.data());
 }
 
 int main()
 {
-    SayHello(LOCALE_EN_HELLO, NAME_ELEANOR);
-    SayHello(LOCALE_FR_HELLO, NAME_TOM);
+    PrankMoe(MOE_DIALOGUE_1, PRANK_NAME_1);
+    PrankMoe(MOE_DIALOGUE_2, PRANK_NAME_2);
 
     return 0;
 }
