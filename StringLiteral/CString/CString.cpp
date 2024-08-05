@@ -7,16 +7,20 @@ const char* LOCALE_EN_HELLO = "Hello %.*s! How are you?\n";
 constexpr const char* NAME_ELEANOR = "Eleanor Rigby";
 constexpr const char* NAME_TOM = "Tom";
 
+inline bool IsEmpty(const char* string)
+{
+    return !string || string[0] == '\0';
+}
+
 void SayHello(const char* localised, const char* fullName)
 {
-    size_t length = std::strlen(fullName);
-    if (length <= 0)
+    if (IsEmpty(localised) || IsEmpty(fullName))
     {
         return;
     }
 
     const char* delimiter = std::strchr(fullName, ' ');
-    int firstNameLength = delimiter != nullptr ? delimiter - fullName : length;
+    int firstNameLength = delimiter != nullptr ? delimiter - fullName : strlen(fullName);
 
     printf(localised, firstNameLength, fullName);
 }
