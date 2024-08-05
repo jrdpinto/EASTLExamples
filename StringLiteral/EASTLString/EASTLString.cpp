@@ -14,16 +14,16 @@ const eastl::string  NAME_TOM = "Tom";
 
 void SayHello(const eastl::string& localised, const eastl::string& fullName)
 {
-    size_t length = fullName.length();
-    if (length <= 0)
+    if (localised.empty() || fullName.empty())
     {
         return;
     }
 
     size_t delimiterPosition = fullName.find(' ');
-    int firstNameLength = delimiterPosition != eastl::string_view::npos ? delimiterPosition : length;
+    eastl::string outputName = delimiterPosition != eastl::string::npos ?
+        fullName.substr(0, delimiterPosition) : fullName;
 
-    printf(localised.data(), firstNameLength, fullName);
+    printf(localised.data(), outputName.length(), outputName);
 }
 
 int main()
