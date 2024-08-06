@@ -1,5 +1,5 @@
 # A guide to using EASTL string_view
-EASTL provides a string class called ``eastl::string_view`` that is similar to ``std::string_view`` in that it is a 'view' into a string object. This 'view' takes the form of a pointer to the original string along with a cached string length. When combined, the string pointer and the cached length can be used to refer to either a substring or the entirety of the original string. As such, ``eastl::string_view`` is ideal for creating substrings and parameter passing of immutable strings. It can also be used to store string literals. This is especially true when compared to alternatives such as ``eastl::string`` or simple ``const char*``. The following code examples will illustrate these advantages while also highlighting a few caveats.
+EASTL provides a string class called ``eastl::string_view`` that is similar to ``std::string_view`` in that it is a 'view' into a string object. This 'view' takes the form of a pointer to the original string along with a cached string length. When combined, the string pointer and the cached length can be used to refer to either a substring or the entirety of the original string. As such, ``eastl::string_view`` is the ideal string type for creating substrings and parameter passing of immutable strings. It can also be used to store string literals. This is especially true when compared to alternatives such as ``eastl::string`` or simple ``const char*``. The following code examples will illustrate these advantages while also highlighting a few caveats.
 
 ## C String string literals
 Consider the [following code](StringLiteral/CString/CString.cpp) that formats a full name to be used within a pre-defined prank call message. The ``PrankMoe()`` function takes two parameters, one for the prank message, and a second that represents a full name. Using a space as a delimiter, the function extracts the first name from the string. The function will also exit early if either input string is null, or empty.
@@ -23,11 +23,6 @@ inline bool IsEmpty(const char* string)
 
 void PrankMoe(const char* localised, const char* fullName)
 {
-    if (IsEmpty(localised) || IsEmpty(fullName))
-    {
-        return;
-    }
-
     const char* delimiter = std::strchr(fullName, ' ');
     int firstNameLength = delimiter != nullptr ? delimiter - fullName : strlen(fullName);
 
@@ -43,13 +38,13 @@ int main()
 }
 ```
 
-Let's compile this code and [view the disassembly](https://godbolt.org/z/6jsxrdhz6) to analyse the impact of using ``constexpr const char*`` for string literals. The target platform and compiler for this example is x86_64 gcc, with all optimisations enabled (O3).
+Let's compile this code and [view the disassembly](https://godbolt.org/z/1roY93P9M) to analyse the impact of using ``constexpr const char*`` for string literals. The target platform and compiler for this example is x86_64 gcc, with all optimisations enabled (O3).
 
 <details>
 <summary>Disassembly</summary>
 
 ``` assembly
-PrankMoe(char const*, char const*) [clone .part.0]:
+PrankMoe(char const*, char const*):
         push    r12
         mov     r12, rdi
         push    rbp
@@ -74,47 +69,6 @@ PrankMoe(char const*, char const*) [clone .part.0]:
         xor     eax, eax
         pop     r12
         jmp     printf
-PrankMoe(char const*, char const*):
-        test    rdi, rdi
-        je      .L14
-        push    r12
-        push    rbp
-        push    rbx
-        cmp     BYTE PTR [rdi], 0
-        mov     rbx, rdi
-        je      .L6
-        mov     rbp, rsi
-        test    rsi, rsi
-        je      .L6
-        cmp     BYTE PTR [rsi], 0
-        jne     .L17
-.L6:
-        pop     rbx
-        pop     rbp
-        pop     r12
-        ret
-.L14:
-        ret
-.L17:
-        mov     esi, 32
-        mov     rdi, rbp
-        call    strchr
-        mov     rdi, rbp
-        mov     r12, rax
-        call    strlen
-        mov     rsi, r12
-        mov     r8, rbp
-        mov     rdx, rbp
-        sub     rsi, rbp
-        test    r12, r12
-        mov     rcx, rax
-        mov     rdi, rbx
-        cmove   esi, eax
-        pop     rbx
-        xor     eax, eax
-        pop     rbp
-        pop     r12
-        jmp     printf
 .LC0:
         .string "Seymour Butz"
 .LC1:
@@ -122,35 +76,24 @@ PrankMoe(char const*, char const*):
 .LC2:
         .string "Amanda Hugginkiss"
 main:
-        mov     edi, OFFSET FLAT:.LC1
         sub     rsp, 8
         mov     esi, OFFSET FLAT:.LC0
-        call    PrankMoe(char const*, char const*) [clone .part.0]
+        mov     edi, OFFSET FLAT:.LC1
+        call    PrankMoe(char const*, char const*)
         mov     rdi, QWORD PTR MOE_DIALOGUE_2[rip]
-        test    rdi, rdi
-        je      .L19
-        cmp     BYTE PTR [rdi], 0
-        jne     .L24
-.L19:
+        mov     esi, OFFSET FLAT:.LC2
+        call    PrankMoe(char const*, char const*)
         xor     eax, eax
         add     rsp, 8
         ret
-.L24:
-        mov     esi, OFFSET FLAT:.LC2
-        call    PrankMoe(char const*, char const*) [clone .part.0]
-        jmp     .L19
 .LC3:
         .string "Uh, %.*s? Hey, I'm lookin for %.*s!\n"
 MOE_DIALOGUE_2:
         .quad   .LC3
 ```
-
 </details>
 
-A few observations:
-
-- The ‘constexpr’ strings are stored in the read-only memory section at LC0-2 and referenced directly. The non constexpr string is referenced via a pointer instead. This is the advantage of using constexpr for string literals - they are evaluated statically and referenced directly. 
-- There are two versions of the 'PrankMoe()' function in the binary - the original which checks the input strings to ensure that they are not null/empty, and an optimised version `PrankMoe(char const*, char const*) [clone .part.0]:` that excludes the null/empty check. The optimised version appears to be used when it is certain that the input strings are not null or empty.
+This is a very simple program so the disassembly is fairly straightforward. All of the strings here are stored in the binary and referenced to avoid copying. It is worth nothing that the ‘constexpr’ strings are stored in the read-only memory section at LC0/1/2 and referenced directly. The non constexpr string ``MOE_DIALOGUE_2`` however, is referenced via a pointer. This is the advantage of using constexpr for string literals - they are evaluated statically and referenced directly. 
 
 ## EASTL String literals
 Let's now [replace ``constexpr const char*``](StringLiteral/EASTLString/EASTLString.cpp) with ``eastl::string`` to see the impact it has on this code.
@@ -172,11 +115,6 @@ const eastl::string  PRANK_NAME_2 = "Amanda Hugginkiss";
 
 void PrankMoe(const eastl::string& localised, const eastl::string& fullName)
 {
-    if (localised.empty() || fullName.empty())
-    {
-        return;
-    }
-
     size_t delimiterPosition = fullName.find(' ');
     eastl::string outputName = delimiterPosition != eastl::string::npos ?
         fullName.substr(0, delimiterPosition) : fullName;
@@ -193,7 +131,7 @@ int main()
 }
 ```
 
-Note that the code now requires a custom allocator in order to use ``eastl::string`` as the class usually (but not always) allocates strings on the heap. To keep things simple, the custom allocator forwards to global new[]. Let's now examine the [resulting disassembly.](https://godbolt.org/z/Ezjzbocce)
+Note that the code now requires a custom allocator in order to use ``eastl::string`` as the class usually (but not always) allocates strings on the heap. To keep things simple, the custom allocator forwards to global new[]. Let's now examine the [resulting disassembly.](https://godbolt.org/z/bdo95z33G)
 
 <details>
 <summary>Disassembly</summary>
@@ -201,7 +139,6 @@ operator new[](unsigned long, char const*, int, unsigned int, char const*, int):
         jmp     operator new[](unsigned long)
 PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string<char, eastl::allocator> const&):
         push    r14
-        mov     edx, 23
         push    r13
         push    r12
         mov     r12, rsi
@@ -209,48 +146,39 @@ PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string
         mov     rbp, rdi
         push    rbx
         sub     rsp, 32
-        movsx   rax, BYTE PTR [rdi+23]
-        sub     rdx, rax
-        test    al, al
-        jns     .L11
-        mov     rdx, QWORD PTR [rdi+8]
-.L11:
-        test    rdx, rdx
-        je      .L9
-        movsx   rax, BYTE PTR [r12+23]
-        test    al, al
-        js      .L70
-        mov     ecx, 23
+        movsx   rsi, BYTE PTR [rsi+23]
+        test    sil, sil
+        js      .L64
+        movsx   rax, sil
+        mov     edx, 23
         mov     r13, r12
-        sub     rcx, rax
-        lea     rdx, [r12+rcx]
-        je      .L9
-.L16:
+        sub     rdx, rax
+        lea     rcx, [r12+rdx]
+        je      .L65
+.L15:
         mov     rax, r13
-        cmp     r13, rdx
-        jne     .L17
-        jmp     .L71
+        jmp     .L18
 .L20:
         add     rax, 1
-        cmp     rax, rdx
+        cmp     rax, rcx
         je      .L19
-.L17:
+.L18:
         cmp     BYTE PTR [rax], 32
         jne     .L20
-        cmp     rax, rdx
+        cmp     rax, rcx
         je      .L19
         sub     rax, r13
         cmp     rax, -1
         je      .L19
-        cmp     rax, rcx
-        mov     rbx, rcx
+        cmp     rdx, rax
         pxor    xmm0, xmm0
         mov     BYTE PTR [rsp+23], 23
-        cmovbe  rbx, rax
+        cmovbe  rax, rdx
         movaps  XMMWORD PTR [rsp], xmm0
         mov     QWORD PTR [rsp+15], 0
-        cmp     rbx, 23
-        ja      .L72
+        mov     rbx, rax
+        cmp     rax, 23
+        ja      .L66
         movaps  XMMWORD PTR [rsp], xmm0
         mov     QWORD PTR [rsp+15], 0
 .L23:
@@ -260,46 +188,42 @@ PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string
         mov     rsi, r13
         call    memmove
         cmp     BYTE PTR [rsp+23], 0
-        js      .L73
+        js      .L67
         mov     eax, 23
         sub     eax, ebx
         mov     BYTE PTR [rsp+23], al
         test    al, al
-        js      .L74
+        js      .L68
         movzx   eax, al
         mov     edx, 23
         sub     rdx, rax
-        lea     rbx, [rsp+rdx]
+        add     rdx, rsp
 .L27:
-        mov     BYTE PTR [rbx], 0
+        mov     BYTE PTR [rdx], 0
 .L28:
         movsx   rax, BYTE PTR [r12+23]
         test    al, al
-        js      .L75
+        js      .L69
         mov     ecx, 23
         mov     r8, r12
         sub     rcx, rax
-.L37:
+.L40:
         movsx   rax, BYTE PTR [rsp+23]
         test    al, al
-        js      .L38
+        js      .L41
         mov     esi, 23
         mov     rdx, rsp
         sub     rsi, rax
-.L39:
+.L42:
         cmp     BYTE PTR [rbp+23], 0
         mov     rdi, rbp
-        jns     .L41
+        jns     .L44
         mov     rdi, QWORD PTR [rbp+0]
-.L41:
+.L44:
         xor     eax, eax
         call    printf
         cmp     BYTE PTR [rsp+23], 0
-        jns     .L9
-        mov     rdi, QWORD PTR [rsp]
-        test    rdi, rdi
-        je      .L9
-        call    operator delete[](void*)
+        js      .L70
 .L9:
         add     rsp, 32
         pop     rbx
@@ -308,15 +232,8 @@ PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string
         pop     r13
         pop     r14
         ret
-.L70:
-        mov     rcx, QWORD PTR [r12+8]
-        test    rcx, rcx
-        je      .L9
-        mov     r13, QWORD PTR [r12]
-        lea     rdx, [r13+0+rcx]
-        jmp     .L16
-.L72:
-        lea     rdi, [rbx+1]
+.L66:
+        lea     rdi, [rax+1]
         call    operator new[](unsigned long)
         mov     QWORD PTR [rsp+8], 0
         mov     QWORD PTR [rsp], rax
@@ -328,24 +245,36 @@ PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string
         test    al, al
         js      .L22
         jmp     .L23
-.L38:
+.L41:
         mov     rdx, QWORD PTR [rsp]
         mov     rsi, QWORD PTR [rsp+8]
-        jmp     .L39
-.L75:
+        jmp     .L42
+.L69:
         mov     r8, QWORD PTR [r12]
         mov     rcx, QWORD PTR [r12+8]
-        jmp     .L37
-.L19:
-        mov     rbx, rdx
+        jmp     .L40
+.L64:
+        mov     rax, QWORD PTR [r12+8]
+        mov     rdx, rax
+        test    rax, rax
+        je      .L62
+        mov     r13, QWORD PTR [r12]
+        lea     rcx, [r13+0+rax]
+        cmp     r13, rcx
+        jne     .L15
+.L62:
         pxor    xmm0, xmm0
         mov     BYTE PTR [rsp+23], 23
-        sub     rbx, r13
         movaps  XMMWORD PTR [rsp], xmm0
         mov     QWORD PTR [rsp+15], 0
-        mov     r14, rbx
+.L48:
+        mov     r14, QWORD PTR [r12]
+        lea     rbx, [r14+rax]
+        sub     rbx, r14
+        mov     r13, rbx
         cmp     rbx, 23
-        jbe     .L29
+        jbe     .L32
+.L74:
         lea     rdi, [rbx+1]
         call    operator new[](unsigned long)
         mov     QWORD PTR [rsp+8], 0
@@ -354,56 +283,91 @@ PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string
         mov     rax, rbx
         bts     rax, 63
         mov     QWORD PTR [rsp+16], rax
-        sar     rax, 56
-        test    al, al
-        jns     .L31
-.L30:
-        mov     rdx, r14
-        mov     rsi, r13
+.L33:
+        cmp     BYTE PTR [rsp+23], 0
+        js      .L34
+        mov     rdi, rsp
+.L34:
+        mov     rdx, rbx
+        mov     rsi, r14
         call    memmove
         cmp     BYTE PTR [rsp+23], 0
-        js      .L76
+        js      .L71
         mov     eax, 23
         sub     eax, ebx
         mov     BYTE PTR [rsp+23], al
         test    al, al
-        js      .L77
+        js      .L72
         movzx   eax, al
         mov     edx, 23
         sub     rdx, rax
-        lea     r14, [rsp+rdx]
-.L35:
-        mov     BYTE PTR [r14], 0
+        lea     rax, [rsp+rdx]
+.L38:
+        mov     BYTE PTR [rax], 0
         jmp     .L28
-.L73:
+.L70:
+        mov     rdi, QWORD PTR [rsp]
+        test    rdi, rdi
+        je      .L9
+        call    operator delete[](void*)
+        add     rsp, 32
+        pop     rbx
+        pop     rbp
+        pop     r12
+        pop     r13
+        pop     r14
+        ret
+.L67:
         mov     QWORD PTR [rsp+8], rbx
 .L25:
         add     rbx, QWORD PTR [rsp]
+        mov     rdx, rbx
         jmp     .L27
-.L71:
-        mov     BYTE PTR [rsp+23], 23
-        xor     r14d, r14d
-        xor     ebx, ebx
-.L29:
+.L19:
         pxor    xmm0, xmm0
+        mov     edx, 23
+        mov     BYTE PTR [rsp+23], 23
+        movaps  XMMWORD PTR [rsp], xmm0
+        sub     rdx, rsi
+        mov     QWORD PTR [rsp+15], 0
+        test    sil, sil
+        js      .L73
+.L29:
+        mov     r14, r12
+        lea     rbx, [r12+rdx]
+        sub     rbx, r14
+        mov     r13, rbx
+        cmp     rbx, 23
+        ja      .L74
+.L32:
+        pxor    xmm0, xmm0
+        xor     edi, edi
         movaps  XMMWORD PTR [rsp], xmm0
         mov     QWORD PTR [rsp+15], 0
-.L31:
-        mov     rdi, rsp
-        jmp     .L30
-.L76:
-        mov     QWORD PTR [rsp+8], r14
-.L33:
-        add     r14, QWORD PTR [rsp]
-        jmp     .L35
-.L77:
-        mov     r14, QWORD PTR [rsp+8]
         jmp     .L33
-.L74:
+.L71:
+        mov     QWORD PTR [rsp+8], rbx
+.L36:
+        mov     rax, QWORD PTR [rsp]
+        add     rax, r13
+        jmp     .L38
+.L73:
+        mov     rax, QWORD PTR [r12+8]
+        jmp     .L48
+.L65:
+        pxor    xmm0, xmm0
+        mov     BYTE PTR [rsp+23], 23
+        movaps  XMMWORD PTR [rsp], xmm0
+        mov     QWORD PTR [rsp+15], 0
+        jmp     .L29
+.L72:
+        mov     r13, QWORD PTR [rsp+8]
+        jmp     .L36
+.L68:
         mov     rbx, QWORD PTR [rsp+8]
         jmp     .L25
         mov     rbx, rax
-        jmp     .L43
+        jmp     .L46
 PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string<char, eastl::allocator> const&) [clone .cold]:
 eastl::basic_string<char, eastl::allocator>::basic_string(char const*, eastl::allocator const&) [base object constructor]:
         push    r13
@@ -418,17 +382,17 @@ eastl::basic_string<char, eastl::allocator>::basic_string(char const*, eastl::al
         mov     BYTE PTR [rdi+23], 23
         mov     QWORD PTR [rdi+15], 0
         cmp     BYTE PTR [rsi], 0
-        je      .L88
+        je      .L85
         mov     rax, rsi
-.L80:
+.L77:
         add     rax, 1
         cmp     BYTE PTR [rax], 0
-        jne     .L80
+        jne     .L77
         sub     rax, r13
         mov     rbx, rax
         mov     r12, rax
         cmp     rax, 23
-        jbe     .L79
+        jbe     .L76
         lea     rdi, [rax+1]
         call    operator new[](unsigned long)
         mov     QWORD PTR [rbp+8], 0
@@ -444,18 +408,18 @@ eastl::basic_string<char, eastl::allocator>::basic_string(char const*, eastl::al
         cmovns  rdi, rbp
         call    memmove
         cmp     BYTE PTR [rbp+23], 0
-        js      .L82
+        js      .L79
         mov     eax, 23
         sub     eax, ebx
         mov     BYTE PTR [rbp+23], al
         test    al, al
-        jns     .L86
+        jns     .L83
         mov     r12, QWORD PTR [rbp+8]
-        jmp     .L85
-.L88:
+        jmp     .L82
+.L85:
         xor     r12d, r12d
         xor     ebx, ebx
-.L79:
+.L76:
         pxor    xmm0, xmm0
         mov     rdx, r12
         mov     rsi, r13
@@ -464,11 +428,11 @@ eastl::basic_string<char, eastl::allocator>::basic_string(char const*, eastl::al
         mov     QWORD PTR [rbp+15], 0
         call    memmove
         cmp     BYTE PTR [rbp+23], 0
-        js      .L82
+        js      .L79
         mov     eax, 23
         sub     eax, ebx
         mov     BYTE PTR [rbp+23], al
-.L86:
+.L83:
         movsx   rax, al
         sub     rbp, rax
         mov     BYTE PTR [rbp+23], 0
@@ -479,9 +443,9 @@ eastl::basic_string<char, eastl::allocator>::basic_string(char const*, eastl::al
         pop     r12
         pop     r13
         ret
-.L82:
+.L79:
         mov     QWORD PTR [rbp+8], r12
-.L85:
+.L82:
         add     r12, QWORD PTR [rbp+0]
         mov     BYTE PTR [r12], 0
         add     rsp, 8
@@ -502,8 +466,8 @@ main:
         mov     edi, OFFSET FLAT:MOE_DIALOGUE_1
         call    PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string<char, eastl::allocator> const&)
         cmp     BYTE PTR [rsp+39], 0
-        js      .L106
-.L94:
+        js      .L103
+.L91:
         mov     esi, OFFSET FLAT:PRANK_NAME_2
         mov     edi, OFFSET FLAT:MOE_DIALOGUE_2
         call    PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string<char, eastl::allocator> const&)
@@ -511,14 +475,14 @@ main:
         xor     eax, eax
         pop     rbx
         ret
-.L106:
+.L103:
         mov     rdi, QWORD PTR [rsp+16]
         test    rdi, rdi
-        je      .L94
+        je      .L91
         call    operator delete[](void*)
-        jmp     .L94
+        jmp     .L91
         mov     rbx, rax
-        jmp     .L95
+        jmp     .L92
 main.cold:
 .LC2:
         .string "Hey, is there a %.*s here? Hey, everybody, I wanna %.*s!\n"
@@ -565,8 +529,37 @@ PRANK_NAME_1:
 Yikes! This code is considerably more complex. Let's unpack this mess.
 
 - Unlike the previous example, string literals in this code are no longer ``constexpr``. As ``eastl::string`` can sometimes involve dynamically allocated memory, it cannot be evaluated statically.
-- The disassembly now includes a function called ``_GLOBAL__sub_I_operator new[]`` that is responsible for constructing and destroying (on ``_cta_atexit``) any global strings when the program executes and concludes. Again, this is contrary to the previous example where string literals involved no runtime overhead.
-- 
+- The disassembly now includes a function called ``_GLOBAL__sub_I_operator new[]`` that is responsible for constructing and destroying (on ``_cta_atexit``) any global ``eastl::string`` objects when the program executes and concludes. Again, this is contrary to the previous example where string literals involved no runtime overhead.
+- There are two versions of the 'PrankMoe()' function - ``PrankMoe()`` and ``PrankMoe() [clone .cold]``. This is an optimisation that the compiler performs on a function to split it into two functions - a function that accounts for edge cases and error handling (eg: memory allocation failures, invalid or special string lengths), and a performant version that focuses on the more common execution path.
+- In the main function where the ``PRANK_NAME_1`` string literal is passed to the ``PrankMoe()`` function, a new ``eastl::string`` object is constructed. This is another disadvantage to using ``eastl::string`` for parameter passing of immutable strings. If the string is of a different type, a new object containing a copy of the original string must be constructed.
+- Additionally, the call to ``substr()`` within ``PrankMoe()`` returns a brand new copy of the original string. For a large enough string this step will also result in another heap allocation.
+- Overall, this code is bad, and it should feel bad.
+- It should be noted however that the constructor does include an optimisation for small strings. [Small String Optimisation (SSO)](https://youtu.be/CIB_khrNPSU?si=peN-tP4md_6YjRAr) involves storing strings that are small enough within the local storage of the string class, thereby avoiding a heap allocation. In this case, the threshold for a small string is 23 characters as evidenced by the comparisons between string length and the value '23'.
+
+  ``` Assembly
+  mov     rax, rsi
+  // Iterates over the string until a null terminator is found in order to determine its length
+  .L77:
+  add     rax, 1
+  cmp     BYTE PTR [rax], 0
+  jne     .L77
+  sub     rax, r13
+  mov     rbx, rax
+  mov     r12, rax
+  // If the string is 23 characters or less, jump to .L76
+  cmp     rax, 23
+  jbe     .L76
+  ......
+  // Uses 'memmove' to copy the string to the SSO buffer
+  .L76:
+  pxor    xmm0, xmm0
+  mov     rdx, r12
+  mov     rsi, r13
+  mov     rdi, rbp
+  movups  XMMWORD PTR [rbp+0], xmm0
+  mov     QWORD PTR [rbp+15], 0
+  call    memmove
+  ```
 
 ## EASTL::string_view string literals
 The [following example](StringLiteral/StringView/StringView.cpp) replaces ``const char*`` with ``eastl::string_view``. 
@@ -575,121 +568,148 @@ The [following example](StringLiteral/StringView/StringView.cpp) replaces ``cons
 #include <iostream>
 #include <EASTL/string.h>
 
-constexpr eastl::string_view LOCALE_FR_HELLO = "Bonjour %.*s! Comment allez-vous?\n";
-constexpr eastl::string_view LOCALE_EN_HELLO = "Hello %.*s! How are you?\n";
+constexpr eastl::string_view MOE_DIALOGUE_1 = "Hey, is there a %.*s here? Hey, everybody, I wanna %.*s!\n";
+constexpr eastl::string_view MOE_DIALOGUE_2 = "Uh, %.*s? Hey, I'm lookin for %.*s!\n";
 
-constexpr const char* NAME_ELEANOR = "Eleanor Rigby";
-constexpr eastl::string_view NAME_TOM = "Tom";
+constexpr const char* PRANK_NAME_1 = "Seymour Butz";
+constexpr eastl::string_view PRANK_NAME_2 = "Amanda Hugginkiss";
 
-void SayHello(const eastl::string_view localised, const eastl::string_view fullName)
+void PrankMoe(eastl::string_view localised, eastl::string_view fullName)
 {
-    size_t length = fullName.length();
-    if (length <= 0)
-    {
-        return;
-    }
-
     size_t delimiterPosition = fullName.find(' ');
-    int firstNameLength = delimiterPosition != eastl::string_view::npos ? delimiterPosition : length;
+    eastl::string_view outputName = delimiterPosition != eastl::string_view::npos ?
+        fullName.substr(0, delimiterPosition) : fullName;
 
-    printf(localised.data(), firstNameLength, fullName);
+    printf(localised.data(), outputName.length(), outputName.data(), fullName.length(), fullName.data());
 }
 
 int main()
 {
-    SayHello(LOCALE_EN_HELLO, NAME_ELEANOR);
-    SayHello(LOCALE_FR_HELLO, NAME_TOM);
+    PrankMoe(MOE_DIALOGUE_1, PRANK_NAME_1);
+    PrankMoe(MOE_DIALOGUE_2, PRANK_NAME_2);
 
     return 0;
 }
 ```
 
-[Compiling it](https://godbolt.org/z/TWhKhh6G1) with the same parameters as before gives us the following output.
+[Compiling it](https://godbolt.org/z/xPqdzWafM) with the same parameters as before gives us the following output.
+
+<details>
+<summary>Disassembly</summary>
 
 ```Assembly
-SayHello(eastl::basic_string_view<char>, eastl::basic_string_view<char>):
+PrankMoe(eastl::basic_string_view<char>, eastl::basic_string_view<char>):
+        lea     rsi, [rdx+rcx]
         test    rcx, rcx
-        je      .L1
-        lea     r8, [rdx+rcx]
+        je      .L5
         mov     rax, rdx
-        cmp     rdx, r8
+        cmp     rdx, rsi
         jne     .L3
         jmp     .L7
-.L5:
+.L4:
         add     rax, 1
-        cmp     r8, rax
+        cmp     rsi, rax
         je      .L7
 .L3:
         cmp     BYTE PTR [rax], 32
-        jne     .L5
-        mov     rsi, rcx
-        cmp     r8, rax
-        je      .L4
+        jne     .L4
+        mov     r9, rcx
+        cmp     rax, rsi
+        je      .L2
         sub     rax, rdx
-        mov     rsi, rax
+        cmp     rcx, rax
+        mov     r9, rax
+        cmovbe  r9, rcx
         cmp     rax, -1
-        cmove   rsi, rcx
-.L4:
+        cmove   r9, rcx
+.L2:
+        mov     r8, rdx
+        mov     rsi, r9
         xor     eax, eax
         jmp     printf
-.L1:
-        ret
 .L7:
-        mov     rsi, rcx
-        jmp     .L4
+        mov     r9, rcx
+        mov     r8, rdx
+        xor     eax, eax
+        mov     rsi, r9
+        jmp     printf
+.L5:
+        xor     r9d, r9d
+        mov     r8, rdx
+        xor     eax, eax
+        mov     rsi, r9
+        jmp     printf
 .LC0:
-        .string "Eleanor Rigby"
+        .string "Seymour Butz"
 main:
         mov     esi, OFFSET FLAT:.LC0
         sub     rsp, 8
         mov     rax, rsi
-.L12:
+.L13:
         add     rax, 1
         cmp     BYTE PTR [rax], 0
-        jne     .L12
+        jne     .L13
         sub     rax, OFFSET FLAT:.LC0
         mov     rdx, rsi
-        mov     rdi, QWORD PTR LOCALE_EN_HELLO[rip]
-        mov     rsi, QWORD PTR LOCALE_EN_HELLO[rip+8]
+        mov     rdi, QWORD PTR MOE_DIALOGUE_1[rip]
+        mov     rsi, QWORD PTR MOE_DIALOGUE_1[rip+8]
         mov     rcx, rax
-        call    SayHello(eastl::basic_string_view<char>, eastl::basic_string_view<char>)
-        mov     rdx, QWORD PTR NAME_TOM[rip]
-        mov     rcx, QWORD PTR NAME_TOM[rip+8]
-        mov     rdi, QWORD PTR LOCALE_FR_HELLO[rip]
-        mov     rsi, QWORD PTR LOCALE_FR_HELLO[rip+8]
-        call    SayHello(eastl::basic_string_view<char>, eastl::basic_string_view<char>)
+        call    PrankMoe(eastl::basic_string_view<char>, eastl::basic_string_view<char>)
+        mov     rdx, QWORD PTR PRANK_NAME_2[rip]
+        mov     rcx, QWORD PTR PRANK_NAME_2[rip+8]
+        mov     rdi, QWORD PTR MOE_DIALOGUE_2[rip]
+        mov     rsi, QWORD PTR MOE_DIALOGUE_2[rip+8]
+        call    PrankMoe(eastl::basic_string_view<char>, eastl::basic_string_view<char>)
         xor     eax, eax
         add     rsp, 8
         ret
 .LC1:
-        .string "Tom"
-NAME_TOM:
+        .string "Amanda Hugginkiss"
+PRANK_NAME_2:
         .quad   .LC1
-        .quad   3
+        .quad   17
 .LC2:
-        .string "Hello %.*s! How are you?\n"
-LOCALE_EN_HELLO:
+        .string "Uh, %.*s? Hey, I'm lookin for %.*s!\n"
+MOE_DIALOGUE_2:
         .quad   .LC2
-        .quad   25
+        .quad   36
 .LC3:
-        .string "Bonjour %.*s! Comment allez-vous?\n"
-LOCALE_FR_HELLO:
+        .string "Hey, is there a %.*s here? Hey, everybody, I wanna %.*s!\n"
+MOE_DIALOGUE_1:
         .quad   .LC3
-        .quad   34
+        .quad   57
 ```
+
+</details>
 
 Observations
 - The string literals that were defined with ``constexpr string_view`` have been stored in the binary along with a new property that represents their length. This is because ``eastl::string_view`` caches the length of the underlying string on construction.
     ```Assembly
-    LOCALE_FR_HELLO:
+    .LC3:
+        .string "Hey, is there a %.*s here? Hey, everybody, I wanna %.*s!\n"
+    MOE_DIALOGUE_1:
         .quad   .LC3
-        .quad   34
+        .quad   57
     ```
     Constructor defined in [string_view.h](external/EASTL/include/EASTL/string_view.h).
     ```C++
     EA_CONSTEXPR basic_string_view(const T* s) : mpBegin(s), mnCount(s != nullptr ? CharStrlen(s) : 0) {}
     ```
-- Operations such as ``length()`` or ``empty()`` are more performant as the length is cached.
+- Operations such as ``length()`` or ``empty()`` are more performant as the length is cached. The cached string size has the added advantage that the class does not need to rely on the presence of a null terminator ``\0`` to find the end of the string.
 - Note the use of ``eastl::string_view`` as parameters on the ``SayHello()`` function. This class is ideal for passing immutable strings as it stores a const pointer (``mpBegin`` as shown in the constructor above) to the original string without allocating any new memory for a copy. Not requiring a memory allocation also allows the string to be ``constexpr`` so that it can be evaluated statically.
-- The ``NAME_ELEANOR`` string literal did not need to be explicitly converted when passed to the ``SayHello()`` function.
+- The ``Seymour Butz`` string literal is implicitly converted to string_view when passed to the ``PrankMoe()`` function. Unlike the previous example however, there are no allocations involved.
 - Also worth noting that it is sufficient to pass ``eastl::string_view`` by value rather than by reference. As the class simply points to the original string, the extra level of indirection with a reference is unnecessary.
+- Overall, the binary is only slightly bigger than the version that used C strings and is slightly more performant due to the cached string size. It is considerably better than the example that used ``eastl::string`` as it does not involve any heap allocations.
+
+## Caveats
+For all of its benefits, there are a few caveats to be aware of when utilising ``eastl::string_view``.
+
+- As stated before, the class stores a ``const`` pointer to the original string. Should the original string fall out of scope or be deallocated, the pointer will become invalid. For this use case, be sure to use ``eastl::string`` to save a copy of the original string.
+- When using the 'substr()' function, bear in mind that the class still stores a pointer to the original string in its entirety. This means that the 'data()' function which returns a C string, will return the full string (from the pointer onwards) and not the substring.
+  ``` C++
+  eastl::string_view fullName = "Amanda Hugginkiss";
+  eastl::string_view firstName = fullName.substr(0,6);
+
+  printf("%.*s, firstName.length(), firstName.data()) firstName << std::endl;        // Prints 'Amanda'
+  printf("%.*s, firstName.length(), firstName.data()) firstName.data() << std::endl; // Prints 'Amanda Hugginkiss'
+  ```
