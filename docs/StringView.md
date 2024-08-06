@@ -135,6 +135,8 @@ Note that the code now requires a custom allocator in order to use ``eastl::stri
 
 <details>
 <summary>Disassembly</summary>
+
+```assembly
 operator new[](unsigned long, char const*, int, unsigned int, char const*, int):
         jmp     operator new[](unsigned long)
 PrankMoe(eastl::basic_string<char, eastl::allocator> const&, eastl::basic_string<char, eastl::allocator> const&):
@@ -524,6 +526,7 @@ _GLOBAL__sub_I_operator new[](unsigned long, char const*, int, unsigned int, cha
         .string "Seymour Butz"
 PRANK_NAME_1:
         .quad   .LC5
+```
 </details>
 
 Yikes! This code is considerably more complex. Let's unpack this mess.
