@@ -14,11 +14,6 @@ inline bool IsEmpty(const char* string)
 
 void PrankMoe(const char* localised, const char* fullName)
 {
-    if (IsEmpty(localised) || IsEmpty(fullName))
-    {
-        return;
-    }
-
     const char* delimiter = std::strchr(fullName, ' ');
     int firstNameLength = delimiter != nullptr ? delimiter - fullName : strlen(fullName);
 

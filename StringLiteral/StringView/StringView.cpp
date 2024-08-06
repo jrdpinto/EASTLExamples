@@ -9,11 +9,6 @@ constexpr eastl::string_view PRANK_NAME_2 = "Amanda Hugginkiss";
 
 void PrankMoe(eastl::string_view localised, eastl::string_view fullName)
 {
-    if (localised.empty() || fullName.empty())
-    {
-        return;
-    }
-
     size_t delimiterPosition = fullName.find(' ');
     eastl::string_view outputName = delimiterPosition != eastl::string_view::npos ?
         fullName.substr(0, delimiterPosition) : fullName;

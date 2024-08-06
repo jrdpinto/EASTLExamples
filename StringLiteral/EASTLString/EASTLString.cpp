@@ -14,11 +14,6 @@ const eastl::string  PRANK_NAME_2 = "Amanda Hugginkiss";
 
 void PrankMoe(const eastl::string& localised, const eastl::string& fullName)
 {
-    if (localised.empty() || fullName.empty())
-    {
-        return;
-    }
-
     size_t delimiterPosition = fullName.find(' ');
     eastl::string outputName = delimiterPosition != eastl::string::npos ?
         fullName.substr(0, delimiterPosition) : fullName;
