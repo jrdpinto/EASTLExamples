@@ -694,7 +694,7 @@ Observations
         .quad   .LC3
         .quad   57
     ```
-    Constructor defined in [string_view.h](external/EASTL/include/EASTL/string_view.h).
+    Constructor defined in [string_view.h](https://github.com/electronicarts/EASTL/blob/05f4b4aef33f2f3ded08f19fa97f5a27ff35ff9f/include/EASTL/string_view.h).
     ```C++
     EA_CONSTEXPR basic_string_view(const T* s) : mpBegin(s), mnCount(s != nullptr ? CharStrlen(s) : 0) {}
     ```
