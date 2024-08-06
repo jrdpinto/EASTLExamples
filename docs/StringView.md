@@ -710,7 +710,7 @@ For all of its benefits, there are a few caveats to be aware of when utilising `
 - As stated before, the class stores a ``const`` pointer to the original string. Should the original string fall out of scope or be deallocated, the pointer will become invalid. For this use case, be sure to use ``eastl::string`` to save a copy of the original string.
 - The ``const`` nature of the underlying string also means that ``eastl::string_view`` is not intended for dynamic construction of strings.
 - While ``eastl::string_view`` is ideal for parameter passing of immutable strings, if the string needs to be modified in any way ``eastl::string&`` is a better choice.
-- When using the 'substr()' function, bear in mind that the class still stores a pointer to the original string in its entirety. This means that the 'data()' function which returns a C string, will return the full string (from the pointer onwards) and not the substring.
+- When using the ``substr()`` function, bear in mind that the class still stores a pointer to the original string in its entirety. This means that the ``data()`` function which returns a C string, will return the full string (from the pointer onwards) and not the substring.
   ``` C++
   eastl::string_view fullName = "Amanda Hugginkiss";
   eastl::string_view firstName = fullName.substr(0,6);
