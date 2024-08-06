@@ -1,8 +1,8 @@
 # A guide to using EASTL string_view
-EASTL provides a string class called ``eastl::string_view`` that is similar to ``std::string_view`` in that it is a 'view' into a string object. This 'view' takes the form of a pointer to the original string along with a cached string length. When combined, the string pointer and the cached length can be used to refer to either a substring or the entirety of the original string. As such, ``eastl::string_view`` is the ideal string type for creating substrings and parameter passing of immutable strings. It can also be used to store string literals. This is especially true when compared to alternatives such as ``eastl::string`` or simple ``const char*``. The following code examples will illustrate these advantages while also highlighting a few caveats.
+EASTL provides a string class called ``eastl::string_view`` that is similar to ``std::string_view`` in that it is a 'view' into a string object. This 'view' takes the form of a pointer to the original string along with a cached string length. When combined, the string pointer and the cached length can be used to refer to either a substring or the entirety of the original string. As such, ``eastl::string_view`` is the ideal string type for creating substrings and parameter passing of immutable strings. It can also be used to store string literals. This advantages are especially evident when compared to alternatives such as ``eastl::string`` or a simple ``const char*``. The following code examples will illustrate these advantages while also highlighting a few caveats.
 
 ## C String string literals
-Consider the [following code](StringLiteral/CString/CString.cpp) that formats a full name to be used within a pre-defined prank call message. The ``PrankMoe()`` function takes two parameters, one for the prank message, and a second that represents a full name. Using a space as a delimiter, the function extracts the first name from the string. The function will also exit early if either input string is null, or empty.
+Consider the [following code](https://github.com/jrdpinto/EASTLExamples/blob/master/StringLiteral/CString/CString.cpp) that formats a full name to be used within a pre-defined prank call message. The ``PrankMoe()`` function takes two parameters, one for the prank message, and a second that represents a full name. Using a space as a delimiter, the function extracts the first name from the string. The function will also exit early if either input string is null, or empty.
 
 With the exception of ``MOE_DIALOGUE_2``, all of these strings are defined using ``constexpr const char*`` to ensure that they are evaluated statically.
 
@@ -96,7 +96,7 @@ MOE_DIALOGUE_2:
 This is a very simple program so the disassembly is fairly straightforward. All of the strings here are stored in the binary and referenced to avoid copying. It is worth nothing that the ‘constexpr’ strings are stored in the read-only memory section at LC0/1/2 and referenced directly. The non constexpr string ``MOE_DIALOGUE_2`` however, is referenced via a pointer. This is the advantage of using constexpr for string literals - they are evaluated statically and referenced directly. 
 
 ## EASTL String literals
-Let's now [replace ``constexpr const char*``](StringLiteral/EASTLString/EASTLString.cpp) with ``eastl::string`` to see the impact it has on this code.
+Let's now [replace ``constexpr const char*``](https://github.com/jrdpinto/EASTLExamples/blob/master/StringLiteral/EASTLString/EASTLString.cpp) with ``eastl::string`` to see the impact it has on this code.
 
 ```C++
 #include <iostream>
@@ -562,7 +562,7 @@ Yikes! This code is considerably more complex. Let's unpack this mess.
   ```
 
 ## EASTL::string_view string literals
-The [following example](StringLiteral/StringView/StringView.cpp) replaces ``const char*`` with ``eastl::string_view``. 
+The [following example](https://github.com/jrdpinto/EASTLExamples/blob/master/StringLiteral/StringView/StringView.cpp) replaces ``const char*`` with ``eastl::string_view``. 
 
 ```C++
 #include <iostream>
@@ -697,7 +697,7 @@ Observations
     ```
 - Operations such as ``length()`` or ``empty()`` are more performant as the length is cached. The cached string size has the added advantage that the class does not need to rely on the presence of a null terminator ``\0`` to find the end of the string.
 - Note the use of ``eastl::string_view`` as parameters on the ``SayHello()`` function. This class is ideal for passing immutable strings as it stores a const pointer (``mpBegin`` as shown in the constructor above) to the original string without allocating any new memory for a copy. Not requiring a memory allocation also allows the string to be ``constexpr`` so that it can be evaluated statically.
-- The ``Seymour Butz`` string literal is implicitly converted to string_view when passed to the ``PrankMoe()`` function. Unlike the previous example however, there are no allocations involved.
+- The ``Seymour Butz`` string literal is implicitly converted to ``eastl::string_view`` when passed to the ``PrankMoe()`` function. Unlike the previous example however, there are no allocations involved.
 - Also worth noting that it is sufficient to pass ``eastl::string_view`` by value rather than by reference. As the class simply points to the original string, the extra level of indirection with a reference is unnecessary.
 - Overall, the binary is only slightly bigger than the version that used C strings and is slightly more performant due to the cached string size. It is considerably better than the example that used ``eastl::string`` as it does not involve any heap allocations.
 
@@ -705,11 +705,13 @@ Observations
 For all of its benefits, there are a few caveats to be aware of when utilising ``eastl::string_view``.
 
 - As stated before, the class stores a ``const`` pointer to the original string. Should the original string fall out of scope or be deallocated, the pointer will become invalid. For this use case, be sure to use ``eastl::string`` to save a copy of the original string.
+- The ``const`` nature of the underlying string also means that ``eastl::string_view`` is not intended for dynamic construction of strings.
+- While ``eastl::string_view`` is ideal for parameter passing of immutable strings, if the string needs to be modified in any way ``eastl::string&`` is a better choice.
 - When using the 'substr()' function, bear in mind that the class still stores a pointer to the original string in its entirety. This means that the 'data()' function which returns a C string, will return the full string (from the pointer onwards) and not the substring.
   ``` C++
   eastl::string_view fullName = "Amanda Hugginkiss";
   eastl::string_view firstName = fullName.substr(0,6);
 
-  printf("%.*s, firstName.length(), firstName.data()) firstName << std::endl;        // Prints 'Amanda'
-  printf("%.*s, firstName.length(), firstName.data()) firstName.data() << std::endl; // Prints 'Amanda Hugginkiss'
+  printf("%.*s\n", firstName.length(), firstName.data()); // Prints 'Amanda'
+  std::cout << firstName.data() << std::endl;             // Prints 'Amanda Hugginkiss'
   ```
