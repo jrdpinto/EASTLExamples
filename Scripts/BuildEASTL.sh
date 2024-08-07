@@ -17,15 +17,19 @@ git submodule update --init
 echo "Clearing build folder ${EASTL_FOLDER}/${BUILD_FOLDER}"
 rm -rf ${BUILD_FOLDER}
 
-mkdir -p ${DEBUG_DIR}
-mkdir -p ${RELEASE_DIR}
+mkdir -p ${DEBUG_DIR} ${RELEASE_DIR}
 
-cmake . -DEASTL_BUILD_TESTS:BOOL=OFF -DEASTL_BUILD_BENCHMARK:BOOL=OFF
-cmake -S . -B ${RELEASE_DIR}
-echo "Building release"
-cmake --build ${RELEASE_DIR} --config Release -- -j 32 
-cmake -S . -B ${DEBUG_DIR}
-echo "Building debug"
-cmake --build ${DEBUG_DIR} --config Debug -- -j 32
+cmake_args="-DEASTL_BUILD_TESTS:BOOL=OFF -DEASTL_BUILD_BENCHMARK:BOOL=OFF"
+
+build() {
+  local build_dir=$1
+  local build_type=$2
+  cmake -S . -B ${build_dir} ${cmake_args}
+  echo "Building ${build_type}"
+  cmake --build ${build_dir} --config ${build_type} --parallel 32
+}
+
+build ${RELEASE_DIR} Release
+build ${DEBUG_DIR} Debug
 
 popd
