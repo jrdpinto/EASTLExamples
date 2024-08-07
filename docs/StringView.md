@@ -88,7 +88,7 @@ MOE_DIALOGUE_2:
 ```
 </details>
 
-This is a very simple program so the disassembly is fairly straightforward. All of the strings here are stored in the binary and referenced to avoid copying. It is worth nothing that the ‘constexpr’ strings are stored in the read-only memory section at LC0/1/2 and referenced directly. The non constexpr string ``MOE_DIALOGUE_2`` however, is referenced via a pointer. This is the advantage of using constexpr for string literals - they are evaluated statically and referenced directly. 
+This is a very simple program so the disassembly is fairly straightforward. All of the strings here are stored in the binary and referenced to avoid copying. It is worth noting that the ‘constexpr’ strings are stored in the read-only memory section at LC0/1/2 and referenced directly. The non constexpr string ``MOE_DIALOGUE_2`` however, is referenced via a pointer. This is the advantage of using constexpr for string literals - they are evaluated statically and referenced directly. 
 
 ## EASTL String literals
 Let's now [replace ``constexpr const char*``](https://github.com/jrdpinto/EASTLExamples/blob/master/StringLiteral/EASTLString/EASTLString.cpp) with ``eastl::string`` to see the impact it has on this code.
