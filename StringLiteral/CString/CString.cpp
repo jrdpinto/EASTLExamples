@@ -7,11 +7,6 @@ const char* MOE_DIALOGUE_2 = "Uh, %.*s? Hey, I'm lookin for %.*s!\n";
 constexpr const char* PRANK_NAME_1 = "Seymour Butz";
 constexpr const char* PRANK_NAME_2 = "Amanda Hugginkiss";
 
-inline bool IsEmpty(const char* string)
-{
-    return !string || string[0] == '\0';
-}
-
 void PrankMoe(const char* localised, const char* fullName)
 {
     const char* delimiter = std::strchr(fullName, ' ');
