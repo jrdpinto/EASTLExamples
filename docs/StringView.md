@@ -16,11 +16,6 @@ const char* MOE_DIALOGUE_2 = "Uh, %.*s? Hey, I'm lookin for %.*s!\n";
 constexpr const char* PRANK_NAME_1 = "Seymour Butz";
 constexpr const char* PRANK_NAME_2 = "Amanda Hugginkiss";
 
-inline bool IsEmpty(const char* string)
-{
-    return !string || string[0] == '\0';
-}
-
 void PrankMoe(const char* localised, const char* fullName)
 {
     const char* delimiter = std::strchr(fullName, ' ');
@@ -38,7 +33,7 @@ int main()
 }
 ```
 
-Let's compile this code and [view the disassembly](https://godbolt.org/z/1roY93P9M) to analyse the impact of using ``constexpr const char*`` for string literals. The target platform and compiler for this example is x86_64 gcc, with all optimisations enabled (O3).
+Let's compile this code and [view the disassembly](https://godbolt.org/z/67sMMs6KM) to analyse the impact of using ``constexpr const char*`` for string literals. The target platform and compiler for this example is x86_64 gcc, with all optimisations enabled (O3).
 
 <details>
 <summary>Disassembly</summary>
